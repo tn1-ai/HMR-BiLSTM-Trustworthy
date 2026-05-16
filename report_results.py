@@ -32,7 +32,7 @@ CLASS_NAMES = ["N", "S", "V", "F", "Q"]
 NUM_CLASSES = 5
 
 
-# ─── Load mô hình R-LSTM đã train ─────────────────────────
+# ─── Load mô hình HMR-BiLSTM đã train ────────────────────────
 def load_rlstm_model(checkpoint_path, device, input_size=1):
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     cfg = ckpt["config"]
@@ -115,7 +115,7 @@ def plot_confusion_matrix(y_true, y_pred, save_path):
     ax.set_ylabel("True Class", fontsize=11)
     ax.set_title("Confusion Matrix (normalized)", fontsize=12)
 
-    plt.suptitle("R-LSTM on MIT-BIH ECG Test Set", fontsize=13)
+    plt.suptitle("HMR-BiLSTM on MIT-BIH ECG Test Set", fontsize=13)
     plt.tight_layout()
     plt.savefig(save_path, dpi=400, bbox_inches="tight")
     plt.close()
@@ -138,7 +138,7 @@ def plot_roc_curve(y_true, y_prob, save_path):
     ax.plot([0, 1], [0, 1], "--", color="gray", linewidth=1)
     ax.set_xlabel("False Positive Rate", fontsize=12)
     ax.set_ylabel("True Positive Rate", fontsize=12)
-    ax.set_title("ROC Curves (One-vs-Rest) — R-LSTM on MIT-BIH ECG",
+    ax.set_title("ROC Curves (One-vs-Rest) — HMR-BiLSTM on MIT-BIH ECG",
                  fontsize=12)
     ax.legend(loc="lower right", fontsize=10)
     ax.grid(alpha=0.3)
@@ -188,7 +188,7 @@ def plot_gate_trajectories(r_all, y_all, save_path):
 def plot_comparison_bars(all_results, save_path):
     """Bar chart so sánh tất cả mô hình."""
     model_order = ["logistic_regression", "decision_tree", "lstm", "bilstm", "rlstm"]
-    model_labels = ["LR", "DT", "LSTM", "BiLSTM", "R-LSTM"]
+    model_labels = ["LR", "DT", "LSTM", "BiLSTM", "HMR-BiLSTM"]
     metrics = ["accuracy", "precision_macro", "recall_macro", "f1_macro", "auc_ovr"]
     metric_labels = ["Accuracy", "Prec(macro)", "Rec(macro)", "F1(macro)", "AUC(OvR)"]
 
@@ -227,7 +227,7 @@ def plot_results_table(all_results, save_path):
         "decision_tree": "Decision Tree",
         "lstm": "LSTM",
         "bilstm": "BiLSTM",
-        "rlstm": "R-LSTM (Proposed)",
+        "rlstm": "HMR-BiLSTM",
     }
     
     cell_text = []
@@ -273,7 +273,7 @@ def main():
     fig_dir = Path("results/figures")
     fig_dir.mkdir(parents=True, exist_ok=True)
 
-    print("[Loading R-LSTM and test data]")
+    print("[Loading HMR-BiLSTM and test data]")
     try:
         test = np.load("data/processed/test.npz")
         X_test, y_test = test["X"], test["y"]
@@ -326,7 +326,7 @@ def main():
         "decision_tree": "Decision Tree",
         "lstm": "LSTM",
         "bilstm": "BiLSTM",
-        "rlstm": "R-LSTM (Proposed)",
+        "rlstm": "HMR-BiLSTM",
     }
     for name in order:
         if name not in all_results:

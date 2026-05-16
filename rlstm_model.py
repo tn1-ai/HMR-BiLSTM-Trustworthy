@@ -1,5 +1,5 @@
 """
-R-LSTM: Bidirectional LSTM with Hybrid Memory Control
+HMR-BiLSTM: Bidirectional LSTM with Hybrid Memory Control
 ========================================================
 
 Kiến trúc: Hybrid Memory Path
@@ -55,11 +55,11 @@ class AttentionPooling(nn.Module):
 
 
 # =============================================================================
-#  R-LSTM CELL — Phương án B (Hybrid Memory Path)
+#  HMR-BiLSTM CELL — Phương án B (Hybrid Memory Path)
 # =============================================================================
 class RLSTMCell(nn.Module):
     """
-    Cell R-LSTM với Hybrid Memory Path:
+    HMR-BiLSTM cell với Hybrid Memory Path:
     - RMC path: softmax attention blend của c_keep và c_add
     - LSTM path: standard memory update f_t * c_prev + i_t * g_t
     - Blend qua learnable beta gate
@@ -187,7 +187,7 @@ class RLSTMCell(nn.Module):
 
 
 # =============================================================================
-#  R-LSTM LAYER
+#  HMR-BiLSTM LAYER
 # =============================================================================
 class RLSTMLayer(nn.Module):
     def __init__(self, input_size, hidden_size, dropout=0.1):
@@ -220,7 +220,7 @@ class RLSTMLayer(nn.Module):
 
 
 # =============================================================================
-#  BIDIRECTIONAL R-LSTM
+#  BIDIRECTIONAL HMR-BiLSTM
 # =============================================================================
 class BiRLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, dropout=0.1):
@@ -249,7 +249,7 @@ class BiRLSTM(nn.Module):
 
 
 # =============================================================================
-#  CLASSIFIER với CNN + R-LSTM + ATTENTION POOLING
+#  CLASSIFIER với CNN + HMR-BiLSTM + ATTENTION POOLING
 # =============================================================================
 class RLSTMClassifier(nn.Module):
     def __init__(

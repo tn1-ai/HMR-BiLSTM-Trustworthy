@@ -119,11 +119,6 @@ def train_lstm(name, X_tr, y_tr, X_va, y_va, bidirectional, device, cw):
     return model
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate model robustness to Gaussian noise")
-    parser.add_argument("--mode", choices=["rlstm_only", "all"], default="all",
-                       help="Evaluation mode: 'rlstm_only' for R-LSTM only, 'all' for all models")
-    args = parser.parse_args()
-    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     
@@ -139,102 +134,65 @@ def main():
     noise_levels = [0.0, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
     results = {"Noise Std": noise_levels}
     
-    if args.mode == "rlstm_only":
-        # Evaluate R-LSTM only
-        print("\n[Evaluating R-LSTM]")
-        checkpoint_path = "results/checkpoints/best_rlstm.pt"
-        input_size = X_te.shape[-1] if len(X_te.shape) > 2 else 1
-        rlstm_model, _ = load_rlstm_model(checkpoint_path, device, input_size)
-        results["R-LSTM"] = evaluate_torch_model_noise(rlstm_model, X_te, y_te, device, noise_levels, is_rlstm=True)
-        
-        # Print results table
-        print("\n" + "="*50)
-        print(f"{'Noise Std':<15} | {'R-LSTM F1':<15}")
-        print("-" * 50)
-        for i, std in enumerate(noise_levels):
-            print(f"{std:<15.2f} | {results['R-LSTM'][i]:<15.4f}")
-        
-        # Plotting
-        fig_dir = Path("results/figures")
-        fig_dir.mkdir(parents=True, exist_ok=True)
-        save_path = fig_dir / "robustness_noise.png"
-        
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(noise_levels, results["R-LSTM"], marker='o', linewidth=2, color="#43A047", label="R-LSTM F1")
-        
-        ax.set_xlabel("Gaussian Noise Std", fontsize=12)
-        ax.set_ylabel("Macro F1-Score", fontsize=12)
-        ax.set_title("R-LSTM Robustness to Gaussian Noise", fontsize=13)
-        ax.set_ylim([0, 1.05])
-        ax.set_xlim([0, max(noise_levels) + 0.02])
-        ax.grid(alpha=0.4, linestyle="--")
-        ax.legend(loc="lower left", fontsize=11)
-        
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=400, bbox_inches="tight")
-        plt.close()
-        print(f"\n[OK] Saved robustness chart to {save_path}")
+    # 1. Logistic Regression
+    print("\n[Evaluating Logistic Regression]")
+    lr = LogisticRegression(max_iter=5000, random_state=42, class_weight="balanced", n_jobs=-1, solver="lbfgs")
+    lr.fit(flatten_sequences(X_tr), y_tr)
+    results["LR"] = evaluate_sklearn_model_noise(lr, X_te, y_te, noise_levels)
     
-    else:  # args.mode == "all"
-        # 1. Logistic Regression
-        print("\n[Evaluating Logistic Regression]")
-        lr = LogisticRegression(max_iter=5000, random_state=42, class_weight="balanced", n_jobs=-1, solver="lbfgs")
-        lr.fit(flatten_sequences(X_tr), y_tr)
-        results["LR"] = evaluate_sklearn_model_noise(lr, X_te, y_te, noise_levels)
+    # 2. Decision Tree
+    print("\n[Evaluating Decision Tree]")
+    dt = DecisionTreeClassifier(max_depth=15, min_samples_leaf=10, class_weight="balanced", random_state=42)
+    dt.fit(flatten_sequences(X_tr), y_tr)
+    results["DT"] = evaluate_sklearn_model_noise(dt, X_te, y_te, noise_levels)
+    
+    # 3. LSTM
+    lstm_model = train_lstm("LSTM", X_tr, y_tr, X_va, y_va, False, device, cw)
+    results["LSTM"] = evaluate_torch_model_noise(lstm_model, X_te, y_te, device, noise_levels, is_rlstm=False)
+    
+    # 4. BiLSTM
+    bilstm_model = train_lstm("BiLSTM", X_tr, y_tr, X_va, y_va, True, device, cw)
+    results["BiLSTM"] = evaluate_torch_model_noise(bilstm_model, X_te, y_te, device, noise_levels, is_rlstm=False)
+    
+    # 5. HMR-BiLSTM
+    print("\n[Evaluating HMR-BiLSTM]")
+    checkpoint_path = "results/checkpoints/best_rlstm.pt"
+    input_size = X_te.shape[-1] if len(X_te.shape) > 2 else 1
+    rlstm_model, _ = load_rlstm_model(checkpoint_path, device, input_size)
+    results["HMR-BiLSTM"] = evaluate_torch_model_noise(rlstm_model, X_te, y_te, device, noise_levels, is_rlstm=True)
+    
+    # Print results table
+    print("\n" + "="*80)
+    print(f"{'Noise Std':<10} | {'LR':<10} | {'DT':<10} | {'LSTM':<10} | {'BiLSTM':<10} | {'HMR-BiLSTM':<10}")
+    print("-" * 80)
+    for i, std in enumerate(noise_levels):
+        print(f"{std:<10.2f} | {results['LR'][i]:<10.4f} | {results['DT'][i]:<10.4f} | {results['LSTM'][i]:<10.4f} | {results['BiLSTM'][i]:<10.4f} | {results['HMR-BiLSTM'][i]:<10.4f}")
         
-        # 2. Decision Tree
-        print("\n[Evaluating Decision Tree]")
-        dt = DecisionTreeClassifier(max_depth=15, min_samples_leaf=10, class_weight="balanced", random_state=42)
-        dt.fit(flatten_sequences(X_tr), y_tr)
-        results["DT"] = evaluate_sklearn_model_noise(dt, X_te, y_te, noise_levels)
-        
-        # 3. LSTM
-        lstm_model = train_lstm("LSTM", X_tr, y_tr, X_va, y_va, False, device, cw)
-        results["LSTM"] = evaluate_torch_model_noise(lstm_model, X_te, y_te, device, noise_levels, is_rlstm=False)
-        
-        # 4. BiLSTM
-        bilstm_model = train_lstm("BiLSTM", X_tr, y_tr, X_va, y_va, True, device, cw)
-        results["BiLSTM"] = evaluate_torch_model_noise(bilstm_model, X_te, y_te, device, noise_levels, is_rlstm=False)
-        
-        # 5. R-LSTM
-        print("\n[Evaluating R-LSTM]")
-        checkpoint_path = "results/checkpoints/best_rlstm.pt"
-        input_size = X_te.shape[-1] if len(X_te.shape) > 2 else 1
-        rlstm_model, _ = load_rlstm_model(checkpoint_path, device, input_size)
-        results["R-LSTM"] = evaluate_torch_model_noise(rlstm_model, X_te, y_te, device, noise_levels, is_rlstm=True)
-        
-        # Print results table
-        print("\n" + "="*80)
-        print(f"{'Noise Std':<10} | {'LR':<10} | {'DT':<10} | {'LSTM':<10} | {'BiLSTM':<10} | {'R-LSTM':<10}")
-        print("-" * 80)
-        for i, std in enumerate(noise_levels):
-            print(f"{std:<10.2f} | {results['LR'][i]:<10.4f} | {results['DT'][i]:<10.4f} | {results['LSTM'][i]:<10.4f} | {results['BiLSTM'][i]:<10.4f} | {results['R-LSTM'][i]:<10.4f}")
-            
-        # Plotting
-        fig_dir = Path("results/figures")
-        fig_dir.mkdir(parents=True, exist_ok=True)
-        save_path = fig_dir / "robustness_noise_all.png"
-        
-        fig, ax = plt.subplots(figsize=(9, 6))
-        colors = {"LR": "#9E9E9E", "DT": "#FFA726", "LSTM": "#42A5F5", "BiLSTM": "#5C6BC0", "R-LSTM": "#43A047"}
-        markers = {"LR": "v", "DT": "^", "LSTM": "x", "BiLSTM": "d", "R-LSTM": "o"}
-        
-        for model_name in ["LR", "DT", "LSTM", "BiLSTM", "R-LSTM"]:
-            ax.plot(noise_levels, results[model_name], marker=markers[model_name], 
-                    linewidth=2, color=colors[model_name], label=model_name)
-        
-        ax.set_xlabel("Gaussian Noise Std", fontsize=12)
-        ax.set_ylabel("Macro F1-Score", fontsize=12)
-        ax.set_title("Model Robustness to Gaussian Noise (Macro F1)", fontsize=13)
-        ax.set_ylim([0, 1.0])
-        ax.set_xlim([0, max(noise_levels) + 0.02])
-        ax.grid(alpha=0.4, linestyle="--")
-        ax.legend(loc="lower left", fontsize=11)
-        
-        plt.tight_layout()
-        plt.savefig(save_path, dpi=400, bbox_inches="tight")
-        plt.close()
-        print(f"\n[OK] Saved comprehensive robustness chart to {save_path}")
+    # Plotting
+    fig_dir = Path("results/figures")
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    save_path = fig_dir / "robustness_noise_all.png"
+    
+    fig, ax = plt.subplots(figsize=(9, 6))
+    colors = {"LR": "#9E9E9E", "DT": "#FFA726", "LSTM": "#42A5F5", "BiLSTM": "#5C6BC0", "HMR-BiLSTM": "#43A047"}
+    markers = {"LR": "v", "DT": "^", "LSTM": "x", "BiLSTM": "d", "HMR-BiLSTM": "o"}
+    
+    for model_name in ["LR", "DT", "LSTM", "BiLSTM", "HMR-BiLSTM"]:
+        ax.plot(noise_levels, results[model_name], marker=markers[model_name], 
+                linewidth=2, color=colors[model_name], label=model_name)
+    
+    ax.set_xlabel("Gaussian Noise Std", fontsize=12)
+    ax.set_ylabel("Macro F1-Score", fontsize=12)
+    ax.set_title("Model Robustness to Gaussian Noise (Macro F1)", fontsize=13)
+    ax.set_ylim([0, 1.0])
+    ax.set_xlim([0, max(noise_levels) + 0.02])
+    ax.grid(alpha=0.4, linestyle="--")
+    ax.legend(loc="lower left", fontsize=11)
+    
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=400, bbox_inches="tight")
+    plt.close()
+    print(f"\n[OK] Saved comprehensive robustness chart to {save_path}")
 
 if __name__ == "__main__":
     main()

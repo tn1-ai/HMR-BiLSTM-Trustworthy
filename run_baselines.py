@@ -94,13 +94,13 @@ def run_decision_tree(train, test):
 
 # ─── LSTM baselines ───
 class LSTMBaseline(nn.Module):
-    """LSTM/BiLSTM baseline với CNN feature extractor (để fair so với R-LSTM)."""
+    """LSTM/BiLSTM baseline với CNN feature extractor (để fair so với HMR-BiLSTM)."""
 
     def __init__(self, input_size, hidden_size=96, bidirectional=False,
                  dropout=0.25, num_classes=5, cnn_out_channels=64):
         super().__init__()
 
-        # CNN feature extractor (giống R-LSTM để fair)
+        # CNN feature extractor (giống HMR-BiLSTM để fair)
         self.cnn = nn.Sequential(
             nn.Conv1d(input_size, 32, kernel_size=5, padding=2),
             nn.BatchNorm1d(32),
@@ -125,7 +125,7 @@ class LSTMBaseline(nn.Module):
 
         out_dim = hidden_size * (2 if bidirectional else 1)
 
-        # Attention pooling (giống R-LSTM để fair)
+        # Attention pooling (giống HMR-BiLSTM để fair)
         self.attention = nn.Sequential(
             nn.Linear(out_dim, out_dim // 2),
             nn.Tanh(),

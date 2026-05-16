@@ -1,5 +1,5 @@
 """
-Huấn luyện R-LSTM trên MIT-BIH ECG (PHIÊN BẢN TỐI ƯU TỐC ĐỘ).
+Huấn luyện HMR-BiLSTM trên MIT-BIH ECG (PHIÊN BẢN TỐI ƯU TỐC ĐỘ).
 
 Cấu hình cân bằng:
 - hidden_size = 96 (đủ capacity, không quá lớn)
@@ -185,7 +185,7 @@ def main():
             print(f"  Class weights (clipped): {class_weights.cpu().numpy()}")
 
     # Build model
-    print("\n[Building R-LSTM model]")
+    print("\n[Building HMR-BiLSTM model]")
     model = RLSTMClassifier(
     input_size=input_size,
     hidden_size=cfg["hidden_size"],
@@ -206,7 +206,7 @@ def main():
     )
 
     # Training loop
-    print(f"\n[Training R-LSTM] {cfg['epochs']} epochs, patience={cfg['early_stopping_patience']}")
+    print(f"\n[Training HMR-BiLSTM] {cfg['epochs']} epochs, patience={cfg['early_stopping_patience']}")
     best_f1 = 0.0
     best_epoch = 0
     patience_counter = 0
