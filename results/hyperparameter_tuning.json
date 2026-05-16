@@ -1,0 +1,40 @@
+[
+  {
+    "config_name": "Baseline",
+    "config": {
+      "name": "Baseline",
+      "hidden_size": 128,
+      "dropout": 0.3,
+      "lambda_smooth": 0.01,
+      "lr": 0.001,
+      "weight_decay": 0.0001,
+      "use_scheduler": false
+    },
+    "best_val_auc": 0.9721600771456124,
+    "best_epoch": 5,
+    "test_accuracy": 0.9203947368421053,
+    "test_precision": 0.7043189368770764,
+    "test_recall": 0.8688524590163934,
+    "test_f1": 0.7779816513761468,
+    "test_auc_roc": 0.9627871421964129
+  },
+  {
+    "config_name": "Higher \u03bb (0.05)",
+    "config": {
+      "name": "Higher \u03bb (0.05)",
+      "hidden_size": 128,
+      "dropout": 0.3,
+      "lambda_smooth": 0.05,
+      "lr": 0.001,
+      "weight_decay": 0.0001,
+      "use_scheduler": false
+    },
+    "best_val_auc": 0.9728383156541305,
+    "best_epoch": 5,
+    "test_accuracy": 0.9230263157894737,
+    "test_precision": 0.7081967213114754,
+    "test_recall": 0.8852459016393442,
+    "test_f1": 0.7868852459016393,
+    "test_auc_roc": 0.962767870908063
+  }
+]
