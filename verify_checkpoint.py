@@ -12,6 +12,8 @@ Mục đích:
 Usage:
     python verify_checkpoint.py
 """
+import sys
+import io
 import json
 import numpy as np
 import torch
@@ -22,6 +24,12 @@ import shap
 
 from report_results import load_hmr_bilstm
 from configs.paths import RLSTM_CKPT, get_checkpoint_hash, INTER_VAL, INTER_TEST
+
+# Force UTF-8 output so Unicode check-marks print correctly on Windows
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+else:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 CLASS_NAMES = ["N", "S", "V", "F", "Q"]
 DEVICE = torch.device("cpu")
@@ -70,7 +78,7 @@ def main():
     saved_epoch  = ckpt["epoch"]
     saved_val_f1 = ckpt["val_f1_macro"]
     ckpt_hash    = get_checkpoint_hash(ckpt_path)
-    print(f"  ✓ Keys OK: {list(ckpt.keys())}")
+    print(f"  [OK] Keys OK: {list(ckpt.keys())}")
     print(f"  Saved epoch:   {saved_epoch}")
     print(f"  Saved val F1:  {saved_val_f1:.4f}")
     print(f"  Checkpoint ID: {ckpt_hash}")
@@ -79,7 +87,7 @@ def main():
     print("\n[2] Loading model weights...")
     model, _ = load_hmr_bilstm(ckpt_path, DEVICE)
     model.eval()
-    print("  ✓ Weights loaded successfully")
+    print("  [OK] Weights loaded successfully")
 
     # ── 3. Cross-check with training history ──
     print("\n[3] Cross-checking with training_history.json...")
@@ -90,7 +98,7 @@ def main():
         hist_best_f1 = hist.get("best_val_f1_macro", 0.0)
         hist_best_ep = hist.get("best_epoch", -1)
         if abs(hist_best_f1 - saved_val_f1) < 1e-4 and hist_best_ep == saved_epoch:
-            print(f"  ✓ Checkpoint matches history (epoch {hist_best_ep}, F1={hist_best_f1:.4f})")
+            print(f"  [OK] Checkpoint matches history (epoch {hist_best_ep}, F1={hist_best_f1:.4f})")
         else:
             print(f"  WARNING: Mismatch!")
             print(f"    Checkpoint → epoch={saved_epoch}, F1={saved_val_f1:.4f}")
@@ -111,9 +119,9 @@ def main():
 
     delta_f1 = abs(val_f1 - saved_val_f1)
     if delta_f1 > 0.02:
-        print(f"  WARNING: ΔF1={delta_f1:.4f} > 0.02 — possible wrong checkpoint or data mismatch!")
+        print(f"  WARNING: dF1={delta_f1:.4f} > 0.02 — possible wrong checkpoint or data mismatch!")
     else:
-        print(f"  ✓ ΔF1={delta_f1:.4f} within tolerance — weights verified")
+        print(f"  [OK] dF1={delta_f1:.4f} within tolerance — weights verified")
 
     # ── 5. Per-class report on inter_test.npz ──
     test_file = INTER_TEST
@@ -129,7 +137,7 @@ def main():
     print(f"  Test Macro F1: {test_f1_macro:.4f}")
     for i, name in enumerate(CLASS_NAMES):
         f1_c = test_f1_pc[i] if i < len(test_f1_pc) else float("nan")
-        flag = " ← clinically critical" if name in ("S", "V", "F") else ""
+        flag = " <- clinically critical" if name in ("S", "V", "F") else ""
         print(f"    {name}: F1={f1_c:.4f}{flag}")
 
     print("\n  Full Classification Report:")
@@ -161,7 +169,7 @@ def main():
         explainer = shap.GradientExplainer(wrapper, bg)
         shap_vals = explainer.shap_values(test_x)
 
-        print(f"  ✓ SHAP GradientExplainer SUCCESS")
+        print(f"  [OK] SHAP GradientExplainer SUCCESS")
         print(f"    Output type:  {type(shap_vals)}")
         print(f"    Output shape: {np.array(shap_vals).shape}")
         print(f"    (expected: [5 classes, 5 samples, 187 timesteps, 1 channel])")
@@ -171,11 +179,11 @@ def main():
         if abs_max < 1e-8:
             print(f"  WARNING: SHAP values near zero (max={abs_max:.2e}) — potential gradient masking")
         else:
-            print(f"    Max |SHAP|: {abs_max:.4f} — non-trivial ✓")
+            print(f"    Max |SHAP|: {abs_max:.4f} — non-trivial [OK]")
 
     except Exception as e:
-        print(f"  ✗ SHAP FAILED: {e}")
-        print("    → Must switch to alternative explainer before running T2/T3")
+        print(f"  [FAIL] SHAP FAILED: {e}")
+        print("    -> Must switch to alternative explainer before running T2/T3")
 
     # ── Summary ──
     print("\n" + "=" * 60)
@@ -185,11 +193,11 @@ def main():
     print(f"  Hash:          {ckpt_hash}")
     print(f"  Best epoch:    {saved_epoch}")
     print(f"  Val F1 (ckpt): {saved_val_f1:.4f}")
-    print(f"  Val F1 (now):  {val_f1:.4f}  ✓" if delta_f1 <= 0.02 else f"  Val F1 mismatch! {val_f1:.4f} vs {saved_val_f1:.4f}")
+    print(f"  Val F1 (now):  {val_f1:.4f}  [OK]" if delta_f1 <= 0.02 else f"  Val F1 mismatch! {val_f1:.4f} vs {saved_val_f1:.4f}")
     print(f"  Test Macro F1: {test_f1_macro:.4f}")
     print(f"  SHAP pilot:    see above")
-    print("\n  ✓ Ready to run T1b / T2 / T3 / T-NEW" if delta_f1 <= 0.02 else
-          "\n  ✗ Resolve checkpoint mismatch before proceeding")
+    print("\n  [OK] Ready to run T1b / T2 / T3 / T-NEW" if delta_f1 <= 0.02 else
+          "\n  [FAIL] Resolve checkpoint mismatch before proceeding")
 
 
 if __name__ == "__main__":

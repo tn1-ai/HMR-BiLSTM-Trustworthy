@@ -88,8 +88,80 @@ def main():
     # Load module results
     calib_res = load_json_results(paths["out_calib"] / "results.json")
     explain_res = load_json_results(paths["out_explain"] / "results.json")
-    uncert_res = load_json_results(paths["out_uncert"] / "results.json")
-    robust_res = load_json_results(paths["out_robust"] / "results.json")
+    
+    # ── Load Uncertainty Results ──
+    mc_res = load_json_results(paths["out_uncert"] / "mc_results.json")
+    ens_res = load_json_results(paths["out_uncert"] / "ensemble_results.json")
+    uncert_res = None
+    if mc_res or ens_res:
+        uncert_res = {"metrics": {}}
+        if mc_res and "metrics" in mc_res:
+            m_mc = mc_res["metrics"]
+            uncert_res["metrics"]["mc_dropout"] = {
+                "mean_entropy": m_mc.get("id_mean_entropy", 0.0),
+                "mean_variance": m_mc.get("id_mean_mi", 0.0),
+                "mean_confidence": m_mc.get("id_mean_conf", 0.0),
+                "auroc_ood_mean": m_mc.get("ood_detection_auroc", 0.0)
+            }
+        if ens_res and "metrics" in ens_res:
+            m_ens = ens_res["metrics"]
+            uncert_res["metrics"]["deep_ensemble"] = {
+                "mean_entropy": m_ens.get("id_mean_entropy", 0.0),
+                "mean_variance": m_ens.get("id_mean_mi", 0.0),
+                "mean_confidence": m_ens.get("id_mean_conf", 0.0),
+                "auroc_ood_mean": m_ens.get("ood_detection_auroc", 0.0)
+            }
+
+    # ── Load Robustness Results ──
+    fgsm_res_list = load_json_results(Path("results/logs/fgsm_baseline_comparison.json"))
+    pgd_res_dict = load_json_results(Path("results/logs/pgd_baseline_comparison.json"))
+    cw_res = load_json_results(paths["out_robust"] / "cw_attack_results.json")
+    aa_res = load_json_results(paths["out_robust"] / "autoattack_results.json")
+    
+    robust_res = None
+    if fgsm_res_list or pgd_res_dict or cw_res or aa_res:
+        robust_res = {"metrics": {}}
+        m = robust_res["metrics"]
+        
+        # Load Clean values from AA if possible
+        if aa_res and "metrics" in aa_res:
+            m["clean_acc"] = aa_res["metrics"].get("clean_accuracy", 0.0)
+            m["clean_f1"] = aa_res["metrics"].get("clean_f1_macro", 0.0)
+        elif cw_res and "metrics" in cw_res:
+            m["clean_acc"] = class_metrics["accuracy"]
+            m["clean_f1"] = cw_res["metrics"].get("clean_f1_macro", 0.0)
+        else:
+            m["clean_acc"] = class_metrics["accuracy"]
+            m["clean_f1"] = class_metrics["f1_macro"]
+
+        # Parse FGSM
+        if fgsm_res_list:
+            for item in fgsm_res_list:
+                if item.get("model") == "HMR-BiLSTM" and item.get("epsilon") == 0.02:
+                    m["fgsm_acc"] = item.get("accuracy", 0.0)
+                    m["fgsm_f1"] = item.get("macro_f1", 0.0)
+                    break
+        
+        # Parse PGD
+        if pgd_res_dict and "HMR-BiLSTM" in pgd_res_dict:
+            for item in pgd_res_dict["HMR-BiLSTM"]:
+                if item.get("epsilon") == 0.02:
+                    asr = item.get("attack_success_rate", 0.0)
+                    m["pgd_acc"] = m["clean_acc"] * (1 - asr)
+                    m["pgd_f1"] = item.get("macro_f1", 0.0)
+                    break
+
+        # Parse CW
+        if cw_res and "metrics" in cw_res:
+            m_cw = cw_res["metrics"]
+            m["cw_acc"] = m["clean_acc"] * (1 - m_cw.get("asr_total", 0.0))
+            m["cw_f1"] = m_cw.get("adv_f1_macro", 0.0)
+
+        # Parse AutoAttack
+        if aa_res and "metrics" in aa_res:
+            m_aa = aa_res["metrics"]
+            m["autoattack_acc"] = m["clean_acc"] * (1 - m_aa.get("autoattack_asr", 0.0))
+            m["autoattack_f1"] = m_aa.get("autoattack_f1_macro", 0.0)
     
     # Create the output directory
     paths["out_root"].mkdir(parents=True, exist_ok=True)
