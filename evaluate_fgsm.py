@@ -16,6 +16,7 @@ from report_results import load_hmr_bilstm
 from run_baselines import LSTMBaseline
 import torch.nn as nn
 import os
+from configs.paths import INTER_TEST
 
 
 def fgsm_attack(model, x, y, epsilon, criterion):
@@ -470,7 +471,7 @@ def plot_ecg_comparison(model, dataloader, device, epsilon, output_dir: Path, sa
 
 
 def build_test_loader(batch_size=128):
-    test = np.load("data/processed/test.npz")
+    test = np.load(INTER_TEST)
     X_test, y_test = test["X"], test["y"]
     test_dataset = TensorDataset(torch.from_numpy(X_test).float(), torch.from_numpy(y_test).long())
     return DataLoader(test_dataset, batch_size=batch_size, shuffle=False)

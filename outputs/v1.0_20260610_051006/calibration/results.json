@@ -1,0 +1,17 @@
+{
+  "experiment_version": "v1.0",
+  "run_id": "v1.0_20260610_051006",
+  "module": "calibration",
+  "timestamp": "2026-06-10T05:10:50.051187",
+  "metrics": {
+    "ece_before": 0.03983408801030265,
+    "ece_after": 0.018059205009964264,
+    "mce_before": 0.19772446581295555,
+    "mce_after": 0.31483685970306396,
+    "nll_before": 0.10352408140897751,
+    "nll_after": 0.08693969994783401,
+    "brier_before": 0.04441595250174772,
+    "brier_after": 0.04000921650624057,
+    "temperature": 0.7823467254638672
+  }
+}

@@ -1,0 +1,5 @@
+Section,Metric,Value
+Classification,Accuracy,0.9749
+Classification,Precision (Macro),0.8562
+Classification,Recall (Macro),0.9146
+Classification,Macro F1,0.8825

@@ -1,0 +1,38 @@
+{
+  "epsilon": 0.02,
+  "alpha": 0.005,
+  "clean": {
+    "accuracy": 0.9755,
+    "f1_macro": 0.885602725684875
+  },
+  "convergence": [
+    {
+      "steps": 10,
+      "accuracy": 0.962,
+      "f1_macro": 0.8452291697588595,
+      "attack_success_rate": 0.013839056893900564,
+      "time_sec": 121.43501830101013
+    },
+    {
+      "steps": 20,
+      "accuracy": 0.962,
+      "f1_macro": 0.8437149657255721,
+      "attack_success_rate": 0.013839056893900564,
+      "time_sec": 232.2790162563324
+    },
+    {
+      "steps": 50,
+      "accuracy": 0.962,
+      "f1_macro": 0.8437149657255721,
+      "attack_success_rate": 0.013839056893900564,
+      "time_sec": 574.1146790981293
+    },
+    {
+      "steps": 100,
+      "accuracy": 0.9615,
+      "f1_macro": 0.8429756754241481,
+      "attack_success_rate": 0.014351614556637622,
+      "time_sec": 1139.0608155727386
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+Dimension,Primary Metric,Score / Value
+Accuracy,Macro F1,0.8825
+Calibration,ECE (after scaling),N/A
+Explainability,SHAP top-3 features,N/A
+Robustness,AutoAttack Macro F1,N/A
+Uncertainty,MC Dropout AUROC-OOD,N/A

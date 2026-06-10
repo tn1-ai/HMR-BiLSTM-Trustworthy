@@ -1,0 +1,41 @@
+{
+  "status": "SUCCESS",
+  "saved_parameters": {
+    "mean": 0.17428293824195862,
+    "std": 0.22632740437984467
+  },
+  "raw_stats": {
+    "train": {
+      "mean": 0.17421647906303406,
+      "std": 0.22626154124736786
+    },
+    "val": {
+      "mean": 0.1746596246957779,
+      "std": 0.22669973969459534
+    },
+    "test": {
+      "mean": 0.17347915470600128,
+      "std": 0.2255525290966034
+    }
+  },
+  "processed_stats": {
+    "train": {
+      "mean": -0.0002936781384050846,
+      "std": 0.9997090101242065
+    },
+    "val": {
+      "mean": 0.001664298353716731,
+      "std": 1.0016452074050903
+    },
+    "test": {
+      "mean": -0.003551434027031064,
+      "std": 0.9965763688087463
+    }
+  },
+  "verification": {
+    "train_mean_is_zero": true,
+    "train_std_is_one": true,
+    "val_normalized_using_train_stats": true,
+    "data_leakage_prevented": true
+  }
+}

@@ -111,23 +111,52 @@ def main():
     print_class_distribution(y_test, "TEST")
 
     # =========================================================
-    # STEP 2: NORMALIZATION
+    # STEP 2: SUBSAMPLE
     # =========================================================
 
-    print("\n[2/8] Normalizing ECG signals...")
+    if SUBSAMPLE_SIZE and SUBSAMPLE_SIZE > 0:
+        print(f"\n[2/8] Subsampling train to {SUBSAMPLE_SIZE} samples...")
+        X_train_full, y_train_full = stratified_subsample(
+            X_train_full,
+            y_train_full,
+            SUBSAMPLE_SIZE,
+            RANDOM_SEED,
+        )
+        print_class_distribution(y_train_full, "TRAIN (after subsample)")
+    else:
+        print(f"\n[2/8] Using FULL training set ({len(X_train_full)} samples)")
+        print_class_distribution(y_train_full, "TRAIN (full)")
 
-    # IMPORTANT:
-    # Calculate mean and std on FULL train set BEFORE subsampling
-    # so test set and training set share the same global statistics.
+    # =========================================================
+    # STEP 3: TRAIN/VAL SPLIT
+    # =========================================================
 
-    mean = X_train_full.mean()
-    std = X_train_full.std() + 1e-8
+    print("\n[3/8] Splitting train -> train + val...")
 
-    print(f"  Mean BEFORE normalization: {mean:.6f}")
-    print(f"  Std  BEFORE normalization: {std:.6f}")
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_train_full,
+        y_train_full,
+        test_size=VAL_RATIO,
+        stratify=y_train_full,
+        random_state=RANDOM_SEED,
+    )
 
-    # Normalize
-    X_train_full = (X_train_full - mean) / std
+    # =========================================================
+    # STEP 4: NORMALIZATION
+    # =========================================================
+
+    print("\n[4/8] Normalizing ECG signals using TRAIN-ONLY statistics...")
+
+    # Calculate mean and std on X_train ONLY to prevent validation/test leakage
+    mean = X_train.mean()
+    std = X_train.std() + 1e-8
+
+    print(f"  Train Mean BEFORE normalization: {mean:.6f}")
+    print(f"  Train Std  BEFORE normalization: {std:.6f}")
+
+    # Normalize train, val, and test using train statistics
+    X_train = (X_train - mean) / std
+    X_val = (X_val - mean) / std
     X_test = (X_test - mean) / std
 
     # Save normalization statistics
@@ -139,37 +168,6 @@ def main():
     np.save(
         out_dir / "norm_std.npy",
         np.array([std], dtype=np.float32),
-    )
-
-    # =========================================================
-    # STEP 3: SUBSAMPLE
-    # =========================================================
-
-    if SUBSAMPLE_SIZE and SUBSAMPLE_SIZE > 0:
-        print(f"\n[3/8] Subsampling train to {SUBSAMPLE_SIZE} samples...")
-        X_train_full, y_train_full = stratified_subsample(
-            X_train_full,
-            y_train_full,
-            SUBSAMPLE_SIZE,
-            RANDOM_SEED,
-        )
-        print_class_distribution(y_train_full, "TRAIN (after subsample)")
-    else:
-        print(f"\n[3/8] Using FULL training set ({len(X_train_full)} samples)")
-        print_class_distribution(y_train_full, "TRAIN (full)")
-
-    # =========================================================
-    # STEP 4: TRAIN/VAL SPLIT
-    # =========================================================
-
-    print("\n[4/8] Splitting train -> train + val...")
-
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train_full,
-        y_train_full,
-        test_size=VAL_RATIO,
-        stratify=y_train_full,
-        random_state=RANDOM_SEED,
     )
 
     print(f"  Train: {X_train.shape}")

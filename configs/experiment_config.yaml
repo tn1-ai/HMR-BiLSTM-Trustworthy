@@ -1,0 +1,45 @@
+experiment:
+  version: v1.0
+  run_id: auto          # "auto" → tự sinh v1.0_20260610_053012
+
+dataset: MITBIH
+seed: 42
+model:
+  hidden_size: 96
+  dropout: 0.25
+  num_layers: 2
+  num_classes: 5
+
+uncertainty:
+  mc_samples: 50
+  ensemble_size: 5
+  ensemble_seeds: [42, 123, 456, 789, 2025]
+  ood_n_samples: 2000
+  ood:
+    gaussian_noise: true
+    random_crop: true
+    signal_shift: true
+    baseline_wander: true
+
+robustness:
+  fgsm_eps: [0.01, 0.02, 0.05]
+  pgd_eps:  [0.01, 0.02, 0.05]
+  cw_c: 1.0e-4
+  cw_steps: 1000
+  autoattack_eps: 0.02
+  autoattack_norm: Linf
+
+explainability:
+  shap_background_samples: 200
+  shap_classes: [0, 1, 2, 3]      # N, S, V, F
+  shap_correct_per_class: 10
+  shap_misclassified_per_class: 5
+  # Average SHAP over this many background resamplings before computing Jaccard(SHAP, IG).
+  # GradientExplainer attribution varies with background sample; 3 runs is a reasonable
+  # trade-off (3x runtime) that stabilises top-10 timestep ranking across resamples.
+  shap_averaging_runs: 3
+
+calibration:
+  num_bins: 15
+  temp_lr: 0.01
+  temp_max_iter: 50

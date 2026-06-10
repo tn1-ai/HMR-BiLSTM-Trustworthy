@@ -1,0 +1,16 @@
+% LaTeX-ready tables for Trustworthy ECG
+\begin{table}[ht]
+\centering
+\caption{Trustworthy ECG Evaluation Scorecard}
+\begin{tabular}{llc}
+\hline
+Dimension & Primary Metric & Score/Value \\
+\hline
+Accuracy & Macro F1 & 0.8825 \\
+Calibration & ECE (after scaling) & N/A \\
+Explainability & SHAP top-3 features & N/A \\
+Robustness & AutoAttack Macro F1 & N/A \\
+Uncertainty & MC Dropout AUROC-OOD & N/A \\
+\hline
+\end{tabular}
+\end{table}

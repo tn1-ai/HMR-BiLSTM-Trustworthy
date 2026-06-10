@@ -41,12 +41,15 @@ from evaluate_fgsm import load_baseline_model, build_test_loader, CLASS_NAMES, C
 # PGD attack
 # ---------------------------------------------------------------------------
 
-def pgd_attack(model, x, y, epsilon, alpha, steps, criterion, random_start=True):
+def pgd_attack(model, x, y, epsilon, alpha, steps, criterion, random_start=True, data_min=None, data_max=None):
     x_adv = x.clone().detach()
+    
+    if data_min is None: data_min = x.min()
+    if data_max is None: data_max = x.max()
 
     if random_start:
         delta_init = torch.zeros_like(x).uniform_(-epsilon, epsilon)
-        x_adv = (x + delta_init).detach()
+        x_adv = (x + delta_init).clamp(data_min, data_max).detach()
 
     for _ in range(steps):
         x_adv.requires_grad_(True)
@@ -58,7 +61,7 @@ def pgd_attack(model, x, y, epsilon, alpha, steps, criterion, random_start=True)
         with torch.no_grad():
             x_adv = x_adv + alpha * x_adv.grad.sign()
             delta = torch.clamp(x_adv - x, min=-epsilon, max=epsilon)
-            x_adv = (x + delta).detach()
+            x_adv = (x + delta).clamp(data_min, data_max).detach()
 
     return x_adv, (x_adv - x).detach()
 
@@ -67,19 +70,21 @@ def pgd_attack(model, x, y, epsilon, alpha, steps, criterion, random_start=True)
 # Evaluation
 # ---------------------------------------------------------------------------
 
-def evaluate_pgd(model, dataloader, device, criterion, epsilon, alpha, steps):
-    """Evaluate a model under PGD attack; returns the same metric dict as FGSM."""
+def evaluate_model_pgd(model, loader, device, epsilon, alpha, steps, criterion, data_min, data_max):
     model.eval()
 
-    all_orig_preds, all_preds, all_labels = [], [], []
-    orig_correct_list, adv_wrong_list = [], []
-    orig_conf_list, adv_conf_list = [], []
+    all_orig_preds = []
+    all_preds      = []
+    all_labels     = []
+    orig_correct_list = []
+    adv_wrong_list    = []
+    orig_conf_list    = []
+    adv_conf_list     = []
 
-    for x, y in dataloader:
-        x = x.to(device)
-        y = y.to(device)
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
 
-        # Clean predictions
+        # Clean examples
         with torch.no_grad():
             orig_logits = model(x)
             orig_preds  = orig_logits.argmax(dim=1)
@@ -90,7 +95,7 @@ def evaluate_pgd(model, dataloader, device, criterion, epsilon, alpha, steps):
         if epsilon == 0.0:
             x_adv = x.clone().detach()
         else:
-            x_adv, _ = pgd_attack(model, x, y, epsilon, alpha, steps, criterion)
+            x_adv, _ = pgd_attack(model, x, y, epsilon, alpha, steps, criterion, data_min=data_min, data_max=data_max)
 
         with torch.no_grad():
             adv_logits = model(x_adv)
@@ -137,11 +142,22 @@ def evaluate_pgd(model, dataloader, device, criterion, epsilon, alpha, steps):
     return result
 
 
-def evaluate_pgd_grid(model, dataloader, device, criterion, epsilons, alpha, steps):
+def evaluate_pgd_grid(model, test_loader, device, criterion, epsilons, alpha, steps):
     results = []
-    for eps in epsilons:
-        print(f"  PGD epsilon={eps:.3f}  alpha={alpha:.4f}  steps={steps}")
-        r = evaluate_pgd(model, dataloader, device, criterion, eps, alpha, steps)
+    
+    # Calculate global data min/max for clamping
+    # We can get this directly from the loader
+    all_x = []
+    for x, _ in test_loader:
+        all_x.append(x)
+    all_x = torch.cat(all_x)
+    data_min = float(all_x.min())
+    data_max = float(all_x.max())
+    print(f"Global dataset min: {data_min:.4f}, max: {data_max:.4f} for PGD clamping")
+
+    for epsilon in epsilons:
+        print(f"  PGD epsilon={epsilon:.3f}  alpha={alpha:.4f}  steps={steps}")
+        r = evaluate_model_pgd(model, test_loader, device, epsilon, alpha, steps, criterion, data_min, data_max)
         results.append(r)
     return results
 
@@ -377,7 +393,7 @@ def main():
     models_dict = {
         "LSTM":       "results/checkpoints/best_lstm.pt",
         "BiLSTM":     "results/checkpoints/best_bilstm.pt",
-        "HMR-BiLSTM": "results/checkpoints/best_rlstm.pt",
+        "HMR-BiLSTM": "results/checkpoints/inter_best_rlstm.pt",
     }
 
     comparison = compare_models_pgd(
